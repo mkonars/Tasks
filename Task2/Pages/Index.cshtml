@@ -1,0 +1,108 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Weather";
+}
+<h1>@ViewData["Title"]</h1>
+
+
+<canvas id="Chart1" class="chart" onclick="displayTemperatureTrend()"></canvas>
+<canvas id="Chart2" class="chart" onclick="displayWindTrend()"></canvas>
+
+@section Scripts
+    {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+
+      let chart1;
+      let chart2;
+
+      const renderGraph = (canvasId, type, labels, datasets) => {
+          var ctx = document.getElementById(canvasId);
+          var chart = new Chart(ctx, {
+              type: type,
+              data: {
+                  labels: labels,
+                  datasets: datasets
+              }
+          });
+
+          return chart;
+      }
+
+      const renderGraphs = (response) => {
+
+          const temperatureDataset = {
+              label: "Min temperature",
+              data: response.temperature,
+              backgroundColor: "green"
+          };
+
+          const windDataset = {
+              label: "Max wind speed",
+              data: response.wind,
+              backgroundColor: "blue"
+          };
+
+          chart1 = renderGraph("Chart1", "bar", response.cities, [temperatureDataset]);
+          chart2 = renderGraph("Chart2", "bar", response.cities, [windDataset]);
+      }
+
+      const displayTemperatureTrend = async () => {
+          chart1.destroy();
+
+          const data = await getTrendData("temperature");
+          const labels = data[0].x;
+          const datasets = buildDatasets(data);
+
+          renderGraph("Chart1", "line", labels, datasets);
+      }
+
+      const displayWindTrend = async () => {
+          chart2.destroy();
+
+          const data = await getTrendData("wind");
+          const labels = data[0].x;
+          const datasets = buildDatasets(data);
+
+          renderGraph("Chart2", "line", labels, datasets);
+      }
+
+      const buildDatasets = (data) => {
+          return data.map((d, index) => ({
+              label: d.city,
+              data: d.y,
+              backgroundColor: getColor(index),
+          }));
+      }
+
+      const getTrendData = async (type) => {
+          const response = await fetch(`/Index/?handler=TrendData&type=${type}`);
+          const data = await response.json();
+
+          return data;
+      }
+
+      const getColor = (index) => {
+          if (index === 0)
+              return "blue";
+          if (index === 1)
+              return "green";
+          if (index === 2)
+              return "yellow";
+          if (index === 3)
+              return "orange";
+
+          return "red";
+      }
+
+      document.addEventListener("DOMContentLoaded", async function () {
+          const response = await fetch("/Index/?handler=LastUpdateData");
+          const data = await response.json();
+
+          renderGraphs(data);
+      });
+
+    </script>
+}
